@@ -1,0 +1,64 @@
+<mujoco model="unitree_g1_full">
+  <compiler angle="radian" coordinate="local"/>
+  <option timestep="0.002"/>
+
+  <worldbody>
+    <!-- ==================== BASE / WAIST ==================== -->
+    <body name="torso" pos="0 0 1.0">
+      <!-- Yaw rotation of waist -->
+      <joint name="waist_yaw" type="hinge" axis="0 0 1" range="-2.70 2.70"/>
+      <!-- Pitch rotation (bend forward/back) -->
+      <joint name="waist_pitch" type="hinge" axis="0 1 0" range="-1.57 1.57"/>
+      <!-- Roll rotation -->
+      <joint name="waist_roll" type="hinge" axis="1 0 0" range="-0.78 0.78"/>
+
+      <!-- ==================== LEFT LEG ==================== -->
+      <body name="left_hip" pos="0 0.09 0">
+        <joint name="hip_yaw_L"   type="hinge" axis="0 0 1" range="-2.76 2.76"/>
+        <joint name="hip_roll_L"  type="hinge" axis="1 0 0" range="-0.52 2.97"/>
+        <joint name="hip_pitch_L" type="hinge" axis="0 1 0" range="-2.69 2.69"/>
+        <joint name="knee_L"      type="hinge" axis="0 1 0" range="0 2.88"/>
+        <joint name="ankle_pitch_L" type="hinge" axis="0 1 0" range="-1.57 1.57"/>
+        <joint name="ankle_roll_L"  type="hinge" axis="1 0 0" range="-0.78 0.78"/>
+      </body>
+
+      <!-- ==================== RIGHT LEG ==================== -->
+      <body name="right_hip" pos="0 -0.09 0">
+        <joint name="hip_yaw_R"   type="hinge" axis="0 0 1" range="-2.76 2.76"/>
+        <joint name="hip_roll_R"  type="hinge" axis="1 0 0" range="-0.52 2.97"/>
+        <joint name="hip_pitch_R" type="hinge" axis="0 1 0" range="-2.69 2.69"/>
+        <joint name="knee_R"      type="hinge" axis="0 1 0" range="0 2.88"/>
+        <joint name="ankle_pitch_R" type="hinge" axis="0 1 0" range="-1.57 1.57"/>
+        <joint name="ankle_roll_R"  type="hinge" axis="1 0 0" range="-0.78 0.78"/>
+      </body>
+
+      <!-- ==================== LEFT ARM ==================== -->
+      <body name="left_shoulder" pos="0.0 0.15 1.2">
+        <joint name="shoulder_yaw_L"   type="hinge" axis="0 0 1" range="-2.76 2.76"/>
+        <joint name="shoulder_pitch_L" type="hinge" axis="0 1 0" range="-2.69 2.69"/>
+        <joint name="shoulder_roll_L"  type="hinge" axis="1 0 0" range="-1.57 1.57"/>
+        <joint name="elbow_L"          type="hinge" axis="0 1 0" range="0 2.88"/>
+        <joint name="wrist_pitch_L"    type="hinge" axis="0 1 0" range="-1.57 1.57"/>
+        <joint name="wrist_roll_L"     type="hinge" axis="1 0 0" range="-1.57 1.57"/>
+      </body>
+
+      <!-- ==================== RIGHT ARM ==================== -->
+      <body name="right_shoulder" pos="0.0 -0.15 1.2">
+        <joint name="shoulder_yaw_R"   type="hinge" axis="0 0 1" range="-2.76 2.76"/>
+        <joint name="shoulder_pitch_R" type="hinge" axis="0 1 0" range="-2.69 2.69"/>
+        <joint name="shoulder_roll_R"  type="hinge" axis="1 0 0" range="-1.57 1.57"/>
+        <joint name="elbow_R"          type="hinge" axis="0 1 0" range="0 2.88"/>
+        <joint name="wrist_pitch_R"    type="hinge" axis="0 1 0" range="-1.57 1.57"/>
+        <joint name="wrist_roll_R"     type="hinge" axis="1 0 0" range="-1.57 1.57"/>
+      </body>
+
+      <!-- ==================== HEAD / NECK ==================== -->
+      <body name="neck" pos="0 0 1.4">
+        <joint name="neck_yaw"   type="hinge" axis="0 0 1" range="-1.57 1.57"/>
+        <joint name="neck_pitch" type="hinge" axis="0 1 0" range="-0.78 0.78"/>
+        <joint name="neck_roll"  type="hinge" axis="1 0 0" range="-0.52 0.52"/>
+      </body>
+
+    </body> <!-- torso -->
+  </worldbody>
+</mujoco>
