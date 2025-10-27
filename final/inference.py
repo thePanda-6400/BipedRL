@@ -6,7 +6,7 @@ import os
 from env import HumanoidVelocityEnv
 from n_p3o import ActorCritic
 
-def evaluate(policy_path='policy_best.pt', num_episodes=5, render=True, record_video=True):
+def evaluate(policy_path='policy_final.pt', num_episodes=20, render=True, record_video=True):
     """
     Evaluate trained policy
     
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     import argparse
     
     parser = argparse.ArgumentParser(description='Evaluate trained humanoid policy')
-    parser.add_argument('--policy', type=str, default='policy_best.pt',
+    parser.add_argument('--policy', type=str, default='policy_final.pt',
                         help='Path to policy checkpoint')
     parser.add_argument('--episodes', type=int, default=5,
                         help='Number of episodes to evaluate')

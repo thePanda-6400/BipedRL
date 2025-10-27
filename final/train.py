@@ -12,7 +12,7 @@ def train():
         'epochs': 10,
         'batch_size': 256,
         'steps_per_iter': 2048,
-        'num_iterations': 250,
+        'num_iterations': 1000,
         
         # N-P3O specific
         'kappa_init': 0.1,  # Start small as per paper
