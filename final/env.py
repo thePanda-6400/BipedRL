@@ -1,15 +1,14 @@
-# environment.py (Robust version)
+# environment.py
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
 class HumanoidVelocityEnv(gym.Env):
-    def __init__(self):
-        # Create base environment
-        self.base_env = gym.make('Humanoid-v4')
+    def __init__(self, render_mode=None):
+        # Create base environment with render mode
+        self.base_env = gym.make('Humanoid-v4', render_mode=render_mode)
         
         # Get unwrapped MuJoCo environment
-        # This handles all the wrappers (TimeLimit, etc.)
         env = self.base_env
         while hasattr(env, 'env'):
             env = env.env
@@ -31,6 +30,9 @@ class HumanoidVelocityEnv(gym.Env):
         obs_dim = self.base_env.observation_space.shape[0] + 2
         self.observation_space = spaces.Box(-np.inf, np.inf, (obs_dim,))
         self.action_space = self.base_env.action_space
+        
+        # Store render mode
+        self.render_mode = render_mode
         
     def reset(self, seed=None):
         obs, info = self.base_env.reset(seed=seed)
