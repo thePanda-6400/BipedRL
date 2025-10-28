@@ -9,11 +9,11 @@ from diagnostic_logger import TrainingLogger
 def train():
     config = {
         # Learning - REDUCED LR
-        'lr': 1e-4,  # Reduced from 3e-4
+        'lr': 2.5e-4,  # Reduced from 3e-4
         'epochs': 5,  # Reduced from 10
         'batch_size': 256,
         'steps_per_iter': 2048,
-        'num_iterations': 1000,
+        'num_iterations': 500,
         
         # N-P3O specific
         'kappa_init': 0.1,
@@ -72,7 +72,7 @@ def train():
         
         # Check for KL divergence explosion
         if stats['approx_kl'] > config['target_kl'] * 1.5:
-            print(f"⚠️  KL divergence too high: {stats['approx_kl']:.6f}")
+            print(f"KL divergence too high: {stats['approx_kl']:.6f}")
             print("Consider reducing learning rate or clip parameter")
         
         # Compute mean episode reward
@@ -101,13 +101,13 @@ def train():
             best_reward = mean_reward
             patience_counter = 0
             torch.save(agent.actor_critic.state_dict(), 'policy_best.pt')
-            print(f"🏆 New best policy! Reward: {best_reward:.2f}")
+            print(f"New best policy! Reward: {best_reward:.2f}")
         else:
             patience_counter += 1
         
         # Early stopping
         if patience_counter >= patience:
-            print(f"\n⚠️  No improvement for {patience} iterations. Early stopping.")
+            print(f"\n No improvement for {patience} iterations. Early stopping.")
             break
         
         # Regular checkpoints
