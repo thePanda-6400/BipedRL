@@ -18,7 +18,7 @@ def evaluate(policy_path='policy_best.pt', num_episodes=5, render=True, record_v
 
     # === Create environment ===
     if record_video:
-        print("🎥 Initializing environment in rgb_array mode for video capture...")
+        print("Initializing environment in rgb_array mode for video capture...")
         env = HumanoidVelocityEnv(render_mode="rgb_array")
         env = gym.wrappers.RecordVideo(
             env,
@@ -27,9 +27,9 @@ def evaluate(policy_path='policy_best.pt', num_episodes=5, render=True, record_v
             name_prefix="humanoid_run",
             disable_logger=True
         )
-        print(f"📹 Recording all episodes to {video_dir}")
+        print(f" Recording all episodes to {video_dir}")
     elif render:
-        print("👁️  Rendering live in window (no video saved)...")
+        print("  Rendering live in window (no video saved)...")
         env = HumanoidVelocityEnv(render_mode="human")
     else:
         print("Running evaluation without rendering...")
@@ -45,7 +45,7 @@ def evaluate(policy_path='policy_best.pt', num_episodes=5, render=True, record_v
         policy.load_state_dict(torch.load(policy_path, map_location="cpu"))
         print(f"✓ Loaded trained policy from {policy_path}")
     else:
-        print(f"⚠️ Policy file not found: {policy_path}. Using random policy.")
+        print(f" Policy file not found: {policy_path}. Using random policy.")
     policy.eval()
 
     # === Evaluation loop ===
@@ -94,7 +94,7 @@ def evaluate(policy_path='policy_best.pt', num_episodes=5, render=True, record_v
     env.close()
 
     if record_video:
-        print(f"\n✅ Videos successfully saved in: {video_dir}")
+        print(f"\nVideos successfully saved in: {video_dir}")
         print("   You can open them with any video player (e.g., mpv, VLC).")
 
 
