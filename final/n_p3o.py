@@ -251,7 +251,7 @@ class N_P3O:
         return (advantages - advantages.mean()) / (advantages.std() + 1e-8)
     
     def update(self, buffer):
-        """N-P3O policy update with symmetry augmentation"""
+        """N-P3O policy update with improved stability"""
         
         # Apply symmetry augmentation
         buffer = self.augment_buffer(buffer)
@@ -260,10 +260,10 @@ class N_P3O:
         reward_adv_normalized = self.normalize_advantages(buffer['reward_advantages'])
         cost_adv_normalized = self.normalize_advantages(buffer['cost_advantages'])
         
-        # Compute mean cost for logging
+        # Compute mean cost
         mean_cost = buffer['costs'].mean().item()
         
-        # Statistics for logging
+        # Statistics
         stats = {
             'policy_loss': 0,
             'cost_loss': 0,
@@ -272,14 +272,22 @@ class N_P3O:
             'entropy': 0,
             'kappa': self.kappa,
             'mean_cost': mean_cost,
-            'approx_kl': 0
+            'approx_kl': 0,
+            'clip_fraction': 0,  # NEW: Track how often we clip
         }
         
-        # Multiple epochs of optimization
+        num_updates = 0
+        
+        # Multiple epochs
         for epoch in range(self.config['epochs']):
-            # Create minibatches
+            # Shuffle data
             indices = torch.randperm(len(buffer['obs']))
             batch_size = self.config.get('batch_size', 256)
+            
+            # Early stopping if KL too high
+            if stats['approx_kl'] > self.config.get('target_kl', 0.02) * 1.5:
+                print(f"  Early stopping at epoch {epoch} due to high KL")
+                break
             
             for start in range(0, len(indices), batch_size):
                 end = start + batch_size
@@ -292,6 +300,7 @@ class N_P3O:
                 reward_adv_batch = reward_adv_normalized[batch_idx]
                 cost_adv_batch = cost_adv_normalized[batch_idx]
                 returns_batch = buffer['reward_returns'][batch_idx]
+                old_cost_values_batch = buffer['cost_values'][batch_idx]
                 
                 # Evaluate current policy
                 log_probs, reward_values, cost_values, entropy = \
@@ -300,36 +309,43 @@ class N_P3O:
                 # Importance sampling ratio
                 ratio = torch.exp(log_probs - old_log_probs_batch)
                 
-                # Clipped reward objective (Eq. 6 in paper)
+                # Track clipping
+                clip_fraction = ((ratio > 1 + self.clip_param) | 
+                               (ratio < 1 - self.clip_param)).float().mean()
+                
+                # Clipped reward objective
                 surr1_reward = ratio * reward_adv_batch
                 surr2_reward = torch.clamp(ratio, 1 - self.clip_param, 
                                           1 + self.clip_param) * reward_adv_batch
                 L_clip_R = torch.min(surr1_reward, surr2_reward).mean()
                 
-                # Clipped cost objective (Eq. 8 in paper)
-                # Using max instead of min for cost (we want to minimize violation)
+                # Clipped cost objective
                 surr1_cost = ratio * cost_adv_batch
                 surr2_cost = torch.clamp(ratio, 1 - self.clip_param,
                                         1 + self.clip_param) * cost_adv_batch
                 L_clip_C = torch.max(surr1_cost, surr2_cost).mean()
                 
-                # Compute constraint violation term (Eq. 16 in paper)
-                # L_VIOL = L_CLIP_C + (1-γ)(J_C(π) - ε) + μ_C/σ_C
+                # Constraint violation term
                 mu_C = buffer['cost_advantages'].mean()
                 sigma_C = buffer['cost_advantages'].std() + 1e-8
                 constraint_term = ((1 - self.gamma) * mean_cost + mu_C / sigma_C)
                 L_viol = L_clip_C + constraint_term
                 
-                # N-P3O objective (Eq. 7 in paper with normalization)
-                # L = L_CLIP_R - κ * max(0, L_VIOL)
+                # N-P3O objective
                 policy_loss = -(L_clip_R - self.kappa * torch.max(
                     torch.tensor(0.0), L_viol
                 ))
                 
-                # Value function losses
-                reward_value_loss = F.mse_loss(reward_values.squeeze(), returns_batch)
-                cost_value_loss = F.mse_loss(cost_values.squeeze(), 
-                                             buffer['cost_values'][batch_idx])
+                # Value losses with clipping (helps stability)
+                value_pred_clipped = buffer['reward_values'][batch_idx] + torch.clamp(
+                    reward_values.squeeze() - buffer['reward_values'][batch_idx],
+                    -self.clip_param, self.clip_param
+                )
+                value_loss_unclipped = F.mse_loss(reward_values.squeeze(), returns_batch)
+                value_loss_clipped = F.mse_loss(value_pred_clipped, returns_batch)
+                reward_value_loss = torch.max(value_loss_unclipped, value_loss_clipped)
+                
+                cost_value_loss = F.mse_loss(cost_values.squeeze(), old_cost_values_batch)
                 
                 # Total loss
                 total_loss = (policy_loss + 
@@ -340,7 +356,13 @@ class N_P3O:
                 # Update
                 self.optimizer.zero_grad()
                 total_loss.backward()
-                nn.utils.clip_grad_norm_(self.actor_critic.parameters(), 0.5)
+                
+                # Gradient clipping (IMPORTANT for stability)
+                grad_norm = torch.nn.utils.clip_grad_norm_(
+                    self.actor_critic.parameters(), 
+                    self.config.get('max_grad_norm', 0.5)
+                )
+                
                 self.optimizer.step()
                 
                 # Track statistics
@@ -352,18 +374,19 @@ class N_P3O:
                     stats['cost_value_loss'] += cost_value_loss.item()
                     stats['entropy'] += entropy.mean().item()
                     stats['approx_kl'] += approx_kl
+                    stats['clip_fraction'] += clip_fraction.item()
+                
+                num_updates += 1
         
-        # Update kappa (exponential schedule as per paper Section III.D.2)
+        # Update kappa (slower growth for stability)
         self.kappa = min(self.kappa_max, self.kappa * self.kappa_growth)
         
         # Decay entropy coefficient
         self.entropy_coef *= self.entropy_decay
         
         # Average statistics
-        num_updates = (len(buffer['obs']) // self.config.get('batch_size', 256)) * \
-                      self.config['epochs']
         for key in ['policy_loss', 'cost_loss', 'value_loss', 
-                   'cost_value_loss', 'entropy', 'approx_kl']:
+                   'cost_value_loss', 'entropy', 'approx_kl', 'clip_fraction']:
             stats[key] /= num_updates
         
         self.iteration += 1

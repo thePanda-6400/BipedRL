@@ -13,7 +13,7 @@ def train():
         'epochs': 5,  # Reduced from 10
         'batch_size': 256,
         'steps_per_iter': 2048,
-        'num_iterations': 100,
+        'num_iterations': 1000,
         
         # N-P3O specific
         'kappa_init': 0.1,
@@ -88,8 +88,8 @@ def train():
         
         # Logging
         if iteration % 1 == 0:
+            print(f"Mean Reward: {mean_reward:.2f}")
             print(f"Policy Loss: {stats['policy_loss']:.4f}")
-            print(f"Cost Loss: {stats['cost_loss']:.4f}")
             print(f"Mean Cost: {stats['mean_cost']:.4f}")
             print(f"Kappa: {stats['kappa']:.4f}")
             print(f"Entropy: {stats['entropy']:.4f}")

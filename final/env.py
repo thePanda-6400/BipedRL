@@ -46,53 +46,64 @@ class HumanoidVelocityEnv(gym.Env):
     def _get_obs(self, base_obs):
         return np.concatenate([base_obs, self.command])
     
+# env.py (Better reward function)
     def step(self, action):
         obs, _, terminated, truncated, info = self.base_env.step(action)
-        
+    
         if self.use_direct_access:
-            # Direct MuJoCo access
             qpos = self.mujoco_env.data.qpos
             qvel = self.mujoco_env.data.qvel
-            
+        
             vx_actual = qvel[0]
             vz_actual = qvel[5]
             height = qpos[2]
-            
+        
             torques = self.mujoco_env.data.qfrc_actuator
             torque_violation = np.maximum(0, np.abs(torques) - 100).sum()
-            
+        
             joint_vel = qvel[6:]
             vel_violation = np.maximum(0, np.abs(joint_vel) - 8.0).sum()
-            
+        
             constraint_cost = torque_violation + vel_violation
-            
         else:
-            # Fallback: use observation
             vx_actual = obs[22] if len(obs) > 22 else 0.0
             vz_actual = obs[27] if len(obs) > 27 else 0.0
             height = obs[0] if len(obs) > 0 else 1.5
-            
-            action_violation = np.maximum(0, np.abs(action) - 0.8).sum()
-            constraint_cost = action_violation
-        
-        # Tracking reward
-        vx_error = (vx_actual - self.command[0]) ** 2
-        vz_error = (vz_actual - self.command[1]) ** 2
-        velocity_reward = np.exp(-2 * (vx_error + vz_error))
-        
-        # Alive bonus
-        alive_bonus = 1.0 if 1.0 < height < 2.0 else 0.0
-        
-        # Penalties
-        action_penalty = -0.01 * np.sum(action ** 2)
+            constraint_cost = np.maximum(0, np.abs(action) - 0.8).sum()
+    
+    # IMPROVED REWARD SHAPING
+    # 1. Velocity tracking (main task)
+        vx_error = np.abs(vx_actual - self.command[0])
+        vz_error = np.abs(vz_actual - self.command[1])
+    
+    # Use linear penalty for small errors, quadratic for large
+        velocity_reward = 2.0 * np.exp(-3.0 * (vx_error + vz_error))
+    
+    # 2. Alive bonus (strong incentive to stay upright)
+        alive_bonus = 2.0 if 1.0 < height < 2.0 else -5.0
+    
+    # 3. Height tracking
+        height_penalty = -0.5 * (height - 1.3) ** 2
+    
+    # 4. Action regularization (prevent wild movements)
+        action_penalty = -0.005 * np.sum(action ** 2)
+    
+    # 5. Smoothness (prevent jerky movements)
         smoothness_penalty = -0.01 * np.sum((action - self.prev_action) ** 2)
-        
-        reward = velocity_reward + alive_bonus + action_penalty + smoothness_penalty
+    
+    # Combined reward
+        reward = (velocity_reward + 
+                 alive_bonus + 
+                 height_penalty +
+                 action_penalty + 
+                 smoothness_penalty)
+    
         info['cost'] = constraint_cost
-        
         self.prev_action = action.copy()
-        terminated = height < 1.0 or height > 2.0
-        
+    
+    # Termination
+        terminated = height < 0.8 or height > 2.2
+    
         return self._get_obs(obs), reward, terminated, truncated, info
     
     def render(self):
