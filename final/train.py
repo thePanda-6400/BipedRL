@@ -105,10 +105,7 @@ def train():
         else:
             patience_counter += 1
         
-        # Early stopping
-        if patience_counter >= patience:
-            print(f"\n No improvement for {patience} iterations. Early stopping.")
-            break
+
         
         # Regular checkpoints
         if iteration % 50 == 0:

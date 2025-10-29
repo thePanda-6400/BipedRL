@@ -7,28 +7,10 @@ from env import HumanoidVelocityEnv
 from n_p3o import ActorCritic
 
 
-def evaluate(policy_path='policy_best.pt', num_episodes=5, render=True, record_video=True):
-    """
-    Evaluate trained humanoid policy and optionally record videos.
-    """
+def evaluate(policy_path='policy_final.pt', num_episodes=5, render=True):
+  
 
-    # === Setup output ===
-    video_dir = os.path.join(os.getcwd(), "videos")
-    os.makedirs(video_dir, exist_ok=True)
-
-    # === Create environment ===
-    if record_video:
-        print("Initializing environment in rgb_array mode for video capture...")
-        env = HumanoidVelocityEnv(render_mode="rgb_array")
-        env = gym.wrappers.RecordVideo(
-            env,
-            video_folder=video_dir,
-            episode_trigger=lambda episode_id: True,  # record all episodes
-            name_prefix="humanoid_run",
-            disable_logger=True
-        )
-        print(f" Recording all episodes to {video_dir}")
-    elif render:
+    if render:
         print("  Rendering live in window (no video saved)...")
         env = HumanoidVelocityEnv(render_mode="human")
     else:
@@ -93,21 +75,15 @@ def evaluate(policy_path='policy_best.pt', num_episodes=5, render=True, record_v
 
     env.close()
 
-    if record_video:
-        print(f"\nVideos successfully saved in: {video_dir}")
-        print("   You can open them with any video player (e.g., mpv, VLC).")
-
-
+   
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Evaluate trained humanoid policy")
-    parser.add_argument("--policy", type=str, default="policy_best.pt",
+    parser.add_argument("--policy", type=str, default="policy_final.pt",
                         help="Path to policy checkpoint")
     parser.add_argument("--episodes", type=int, default=5,
                         help="Number of episodes to evaluate")
-    parser.add_argument("--no-video", action="store_true",
-                        help="Disable video recording")
     parser.add_argument("--no-render", action="store_true",
                         help="Disable rendering entirely")
 
@@ -116,17 +92,13 @@ if __name__ == "__main__":
     # Determine rendering options
     if args.no_render:
         render = False
-        record_video = False
-    elif args.no_video:
-        render = True
-        record_video = False
+       
+
     else:
-        render = False  # don’t open a window while recording
-        record_video = True
+        render = True  # don’t open a window while recording
 
     evaluate(
         policy_path=args.policy,
         num_episodes=args.episodes,
         render=render,
-        record_video=record_video
     )
